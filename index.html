@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trending News Tiles</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      width: 100%;
+      max-width: 600px;
+      background: #fff;
+      border: 1px solid #ddd;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      padding: 10px;
+    }
+    .news-tile {
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      overflow: hidden;
+      background: #fafafa;
+    }
+    .news-tile img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    .news-content {
+      padding: 10px;
+    }
+    .news-content h2 {
+      margin: 0 0 10px;
+      font-size: 1.2em;
+    }
+    .news-content p {
+      margin: 0;
+      font-size: 0.95em;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="news-container"></div>
+  </div>
+
+  <script>
+    // Helper function to create a news tile element
+    function createNewsTile(news) {
+      const tile = document.createElement('div');
+      tile.className = 'news-tile';
+
+      // Create and append image element
+      const img = document.createElement('img');
+      img.src = news.image || 'placeholder-image.jpg';
+      img.alt = news.title || 'News image';
+      tile.appendChild(img);
+
+      // Create a container for text content
+      const content = document.createElement('div');
+      content.className = 'news-content';
+      content.innerHTML = `
+        <h2>${news.title || 'No Title Available'}</h2>
+        <p>${news.description || 'No description provided.'}</p>
+      `;
+      tile.appendChild(content);
+
+      return tile;
+    }
+
+    // Function to fetch news using Gemini API's AI chat endpoint
+    async function fetchNews() {
+      // Define a prompt to instruct Gemini to generate a trending news article.
+      const prompt = `
+Generate a trending viral news article in JSON format.
+Return a JSON object with the following fields:
+  - "title": a catchy news title
+  - "image": a URL to a related image (or a placeholder if not available)
+  - "description": a short summary of the news.
+Make sure the output is valid JSON.
+      `;
+      
+      try {
+        // Replace the endpoint URL below with the correct Gemini API URL.
+        // If you need an API key, append it as a query parameter or use headers.
+        const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyD4CbBgqW0gfkR5ZF19H8UErruerZ8WeP0', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{ text: prompt }]
+            }]
+          })
+        });
+        
+        const data = await response.json();
+
+        // The response structure might be nested. Here, we assume that the model's answer is in:
+        // data.candidates[0].content.parts[0].text
+        // Parse the returned text as JSON.
+        let newsJSON;
+        try {
+          newsJSON = JSON.parse(data.candidates[0].content.parts[0].text);
+        } catch(e) {
+          console.error('Failed to parse Gemini response as JSON:', e);
+          newsJSON = {
+            title: 'Error',
+            image: 'placeholder-image.jpg',
+            description: 'Could not parse news data from Gemini response.'
+          };
+        }
+        
+        // Clear any existing tiles and create a new one.
+        const container = document.getElementById('news-container');
+        container.innerHTML = '';
+        container.appendChild(createNewsTile(newsJSON));
+      } catch (error) {
+        console.error('Error fetching news:', error);
+        document.getElementById('news-container').innerHTML = '<p>Failed to load news. Please try again later.</p>';
+      }
+    }
+
+    // Load news on page load
+    document.addEventListener('DOMContentLoaded', fetchNews);
+  </script>
+</body>
+</html>
